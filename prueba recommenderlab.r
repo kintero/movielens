@@ -78,6 +78,11 @@ algorithms <- list(`random items` = list(name = "RANDOM", param = NULL),
 results <- evaluate(scheme, algorithms,
                     n = c(1, 3, 5, 10, 15, 20, 50))
 
+plot(results, annotate = c(1, 3), legend = "right")
+
+
+
+#################
 # Ejemplo con método POPULAR
 
 r2 <- Recommender(train, method = "POPULAR") 
