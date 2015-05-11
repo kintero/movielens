@@ -6,6 +6,17 @@
 # Con código en parte obtenido de aquí:
 # https://github.com/ddehghan/machine_learning_class/blob/master/movielens/movie_lens.r
 
+# Inicialización
+# Comprueba si están y si no instala librerías
+
+if ("data.table" %in% row.names(installed.packages())  == FALSE) install.packages("data.table", dependencies = T)
+if ("scales" %in% row.names(installed.packages())  == FALSE) install.packages("scales", dependencies = T)
+if ("Matrix" %in% row.names(installed.packages())  == FALSE) install.packages("Matrix", dependencies = T)
+if ("irlba" %in% row.names(installed.packages())  == FALSE) install.packages("irlba", dependencies = T)
+if ("rARPACK" %in% row.names(installed.packages())  == FALSE) install.packages("rARPACK", dependencies = T)
+
+
+
 # limpia tu espacio de trabajo
 
 rm(list = ls())
