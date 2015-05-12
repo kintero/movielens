@@ -6,12 +6,20 @@
 # Con código en parte obtenido de aquí:
 # https://github.com/ddehghan/machine_learning_class/blob/master/movielens/movie_lens.r
 
+###########################
+# NOTA IMPORTANTE
+# Este script carga el dataset movielens 20m en memoria y realiza operaciones matriciales con él
+# Requiere >8 GB RAM según se ha probado en un sistema windows 7 y en un ubuntu 13
+# Por debajo de esa memoria el PC puede quedar inestable o muy lento
+
 # Inicialización
 # Comprueba si están y si no instala librerías
 # Este capítulo supone que están instaladas las librerías de la primera 
 
 if ("directlabels" %in% row.names(installed.packages())  == FALSE) install.packages("directlabels", dependencies = T)
 if ("ggplot2" %in% row.names(installed.packages())  == FALSE) install.packages("ggplot2", dependencies = T)
+if ("stringr" %in% row.names(installed.packages())  == FALSE) install.packages("stringr", dependencies = T)
+if ("scales" %in% row.names(installed.packages())  == FALSE) install.packages("scales", dependencies = T)
 
 
 
@@ -34,7 +42,19 @@ load(file = "ratings.per.movie.8500.rda")
 
 summary(ratings.per.movie.8500)
 
-cond <- {ratings.per.movie.8500$sd_rating > 1}
+
+# vamos a extraer el año del título de la peli
+
+library(stringr)
+
+ratings.per.movie.8500$year <- str_extract_all(ratings.per.movie.8500$title, "\\([^()]+\\)")
+ratings.per.movie.8500$year <- gsub("\\(", "", ratings.per.movie.8500$year)                                   
+ratings.per.movie.8500$year <- gsub("\\)", "", ratings.per.movie.8500$year)
+ratings.per.movie.8500$anio <- as.integer(ratings.per.movie.8500$year)
+
+cond <- {ratings.per.movie.8500$anio >= 2000 &
+    ratings.per.movie.8500$n_ratings >= 300 &
+    ratings.per.movie.8500$sd_rating >= 1}
 
 kk <- ratings.per.movie.8500[cond, ]
 movies500 <- head(kk[with(kk,order(n_ratings,
@@ -43,8 +63,6 @@ movies500 <- head(kk[with(kk,order(n_ratings,
 
 ratings500 <- ratings8500[which(ratings8500$movieId %in% movies500$movieId), ]
 
-# problema de este enfoque: tenemos películas relativamente antiguas
-# que son las que más ratings contienen
 
 # matriz sparse de estos ratings
 library(Matrix)
@@ -117,12 +135,8 @@ sparse.cor3 <- function(x){
 
 system.time(corx <- sparse.cor3(m.matrix))
 
-# USAREMOS RCOMMANDER CON EXCELENTE PLUGIN "FactoMineR"
-
-#library(Rcmdr)
-#library(RcmdrPlugin.FactoMineR)
-#library(FactoMineR)
-# library(Factoshiny) Parece no funcionar muy bien
+# Comenzamos el análisis factorial utilizando función más común
+# Es análisis factorial de máxima verosimilitud
 
 FA <- factanal(covmat = corx,
                factors = 15,
@@ -130,6 +144,9 @@ FA <- factanal(covmat = corx,
 
 # podemos extraer el patrón factorial
 print(FA, digits = 2, cutoff = .3, sort = TRUE)
+
+library(ggplot2)
+library(scales)
 
 # y los pesos factoriales para combinaciones de factores
 # Factor 1 y 2
