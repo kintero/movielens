@@ -1,5 +1,7 @@
 # Prueba de la librería recommenderlab
 
+setwd("C:/Users/pedroc/Desktop/movielens/recommenderlab")
+
 library(recommenderlab)
 # viñeta aquí http://cran.r-project.org/web/packages/recommenderlab/vignettes/recommenderlab.pdf
 
@@ -80,7 +82,7 @@ results <- evaluate(scheme, algorithms,
 
 plot(results, annotate = c(1, 3), legend = "right")
 
-
+save.image("prueba_recommender_lab.rda")
 
 #################
 # Ejemplo con método POPULAR

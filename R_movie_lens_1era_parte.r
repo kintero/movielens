@@ -6,6 +6,12 @@
 # Con código en parte obtenido de aquí:
 # https://github.com/ddehghan/machine_learning_class/blob/master/movielens/movie_lens.r
 
+###########################
+# NOTA IMPORTANTE
+# Este script carga el dataset movielens 20m en memoria y realiza operaciones matriciales con él
+# Requiere >8 GB RAM según se ha probado en un sistema windows 7 y en un ubuntu 13
+# Por debajo de esa memoria el PC puede quedar inestable o muy lento
+
 # Inicialización
 # Comprueba si están y si no instala librerías
 
@@ -14,6 +20,7 @@ if ("scales" %in% row.names(installed.packages())  == FALSE) install.packages("s
 if ("Matrix" %in% row.names(installed.packages())  == FALSE) install.packages("Matrix", dependencies = T)
 if ("irlba" %in% row.names(installed.packages())  == FALSE) install.packages("irlba", dependencies = T)
 if ("rARPACK" %in% row.names(installed.packages())  == FALSE) install.packages("rARPACK", dependencies = T)
+if ("ggplot2" %in% row.names(installed.packages())  == FALSE) install.packages("ggplot2", dependencies = T)
 
 
 
@@ -105,8 +112,16 @@ library(rARPACK)
 m.svd = svds(m.matrix, 50)
 summary (m.svd)
 
-plot(1:length(m.svd$d), m.svd$d)
+# representación gráfica de los valores singulares, los 20 primeros
 plot(1:20, m.svd$d[1:20])
+
+# Todos los 50 valores
+plot(1:length(m.svd$d), 
+     m.svd$d,
+     main = "Valores singulares movielens 20M",
+     xlab = "N/orden de valor (1..50)",
+     ylab = "",
+     type = "l")
 
 dim(diag(m.svd$d))
 
@@ -196,11 +211,14 @@ plot(ratings.per.movie$mean_rating[order(ratings.per.movie$n_ratings,
      ylim = c(0,max(ratings.per.movie$mean_rating)), 
      axes = F,
      type = "p",
-     col  =  alpha("red", 0.8), 
+     col  =  alpha("red", 0.9), 
      main = "",
      cex = 0.2,
      xlab = "",
      ylab = "")
+
+axis(side=4, at = pretty(range(ratings.per.movie$mean_rating)))
+mtext("Promedio votos usuarios", side=4, line=3)
 
 par(new=T)
 
@@ -210,14 +228,23 @@ plot(ratings.per.movie$sd_rating[order(ratings.per.movie$n_ratings,
      ylim=c(0,max(ratings.per.movie$sd_rating, na.rm = T)), 
      axes = F,
      type = "p",
-     col  =  alpha("green", 0.5),
+     col  =  alpha("green", 0.8),
      main = "",
      cex = 0.2,
      xlab = "",
      ylab = "")
 
+legend("topright",
+       legend = c("Promedio votos","Desv tip votos"),
+       text.col = c("red","green"),
+       pch = c(16,15),
+       col = c("red","green"))
+
 # Veamos algún ranking, de las mejores y de las peores
 # las peores muy a menudo con muy pocos votos
+
+ratings.per.movie.order <- ratings.per.movie[order(ratings.per.movie$n_ratings,
+                                                             decreasing = T), ]
 
 ratings.per.movie.order[which(
   ratings.per.movie.order$mean_rating == min(ratings.per.movie.order$mean_rating)),]
@@ -326,9 +353,16 @@ system.time({
 str(svd.0)
 
 plot(svd.0$d)
+# Todos los 50 valores
+plot(1:length(svd.0$d), 
+     svd.0$d,
+     main = "Valores singulares movielens 20M",
+     xlab = "N/orden de valor (1..50)",
+     ylab = "",
+     type = "l")
+
 # el primer valor singular está disparado
 
-plot(svd.0$d[2:30])
 
 save.image("movielens_sparse_svd_8500.rda")
 
@@ -391,9 +425,15 @@ loadings <- as.data.frame(
         A))
 
 ratings.per.movie.8500.19 <- merge(loadings,
-                                ratings.per.movie.8500,
-                                by.x = "movie_codes",
-                                by.y = "movie_codes")
+                                   ratings.per.movie.8500[,c("movie_codes",
+                                                             "movieId",
+                                                             "n_ratings",
+                                                             "mean_rating",
+                                                             "sd_rating",
+                                                             "title",
+                                                             "genres")],
+                                   by.x = "movie_codes",
+                                   by.y = "movie_codes")
 
 ######################################
 # Exploramos los componentes (factores aprendidos) encontrados
@@ -417,6 +457,39 @@ head(ratings.per.movie.8500.19[order(ratings.per.movie.8500.19$V18, decreasing =
 head(ratings.per.movie.8500.19[order(ratings.per.movie.8500.19$V19, decreasing = T),], n = 10)
 head(ratings.per.movie.8500.19[order(ratings.per.movie.8500.19$V20, decreasing = T),], n = 10)
 
+# Representación gráfica de componentes 3 y 5
+
+library("ggplot2")
+
+# compos 3 y 5
+c3 <- head(ratings.per.movie.8500.19[order(ratings.per.movie.8500.19$V3, decreasing = T),], 
+           n = 10)
+cc3 <- c3[,c("title", "V3", "V5")]
+
+c5 <- head(ratings.per.movie.8500.19[order(ratings.per.movie.8500.19$V5, decreasing = T),], 
+           n = 10)
+cc5 <- c5[,c("title", "V3", "V5")]
+
+loads <- rbind(cc3, cc5)
+
+
+pdf("PCA20-c3-c5.pdf",
+    width = 10,
+    height = 10,
+    pointsize = 4)
+
+g <- ggplot(loads, aes(x = V3 , y = V5 )) + geom_point(shape = 1) 
+#g <- g + scale_y_continuous(trans=log2_trans()) + scale_x_continuous(trans=log2_trans())
+g <- g + geom_text(aes(label = loads$title, 
+                       size = 0.5,
+                       angle = 30),
+                   hjust = 1,
+                   vjust = 1)
+g <- g + theme(legend.position="none")
+print(g)
+dev.off()
+
+
 
 # Salvamos todo el espacio de trabajo
 # Ojo que son aprox. 1.2GB en disco
@@ -433,22 +506,4 @@ save(ratings.per.movie.8500, file = "ratings.per.movie.8500.rda")
 
 ######################################
 # TERCERA PARTE DE ESTE EJERCICIO: ANALISIS FACTORIAL
-
-
-################
-# links y tags
-
-links <- read.table(file = "links.csv",
-                    header = T,
-                    sep = ",",
-                    fileEncoding = "UTF-8",
-                    quote = '"',
-                    comment = "")
-
-tags <- read.table(file = "tags.csv",
-                   header = T,
-                   sep = ",",
-                   fileEncoding = "UTF-8",
-                   quote = '"',
-                   comment = "")
-
+# en script separado
